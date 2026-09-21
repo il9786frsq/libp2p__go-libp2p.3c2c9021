@@ -239,7 +239,7 @@ func (s *stream) transport() {
 			timer.Reset(0)
 		}
 
-		if buffered > bufsize {
+		if buffered >= bufsize {
 			select {
 			case <-timer.C:
 			case <-s.reset:
@@ -249,12 +249,12 @@ func (s *stream) transport() {
 				}
 				return network.ErrReset
 			}
+			if err := drainBuf(); err != nil {
+				return err
+			}
 			// write this message.
 			_, err := s.write.Write(o.msg)
 			if err != nil {
-				return err
-			}
-			if err := drainBuf(); err != nil {
 				return err
 			}
 		} else {
@@ -277,6 +277,10 @@ func (s *stream) transport() {
 			s.writeErr = network.ErrReset
 			return
 		case <-s.close:
+			if err := drainBuf(); err != nil {
+				s.cancelWrite(err)
+				return
+			}
 			s.writeErr = s.write.Close()
 			if s.writeErr == nil {
 				s.writeErr = ErrClosed
