@@ -81,7 +81,7 @@ func (a *ServerPeerIDAuth) ServeHTTPWithNextHandler(w http.ResponseWriter, r *ht
 	if a.NoTLS {
 		if a.ValidHostnameFn == nil {
 			log.Error("No ValidHostnameFn set. Required for NoTLS")
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		if !a.ValidHostnameFn(hostname) {
@@ -125,7 +125,8 @@ func (a *ServerPeerIDAuth) ServeHTTPWithNextHandler(w http.ResponseWriter, r *ht
 	if err != nil {
 		switch {
 		case errors.Is(err, handshake.ErrInvalidHMAC),
-			errors.Is(err, handshake.ErrExpiredChallenge):
+			errors.Is(err, handshake.ErrExpiredChallenge),
+			errors.Is(err, handshake.ErrExpiredToken):
 
 			hmac.Reset()
 			hs := handshake.PeerIDAuthHandshakeServer{
@@ -149,12 +150,12 @@ func (a *ServerPeerIDAuth) ServeHTTPWithNextHandler(w http.ResponseWriter, r *ht
 
 	peer, err := hs.PeerID()
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if next == nil {
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 	next(peer, w, r)
