@@ -179,14 +179,14 @@ func (h *PeerIDAuthHandshakeServer) Run() error {
 			return err
 		}
 
-		if nowFn().After(h.opaque.CreatedTime.Add(h.TokenTTL)) {
+		if nowFn().After(h.opaque.CreatedTime.Add(challengeTTL)) {
 			return ErrExpiredChallenge
 		}
 		if h.opaque.IsToken {
 			return errors.New("expected challenge, got token")
 		}
 
-		if h.opaque.Hostname != h.opaque.Hostname {
+		if h.Hostname != h.opaque.Hostname {
 			return errors.New("hostname in opaque mismatch")
 		}
 
@@ -228,7 +228,7 @@ func (h *PeerIDAuthHandshakeServer) Run() error {
 
 		h.hb.writeScheme(PeerIDAuthScheme)
 
-		if clientInitiatedHandshake {
+		if !clientInitiatedHandshake {
 			if err := h.addServerSigParam(publicKeyBytes); err != nil {
 				return err
 			}
@@ -246,7 +246,7 @@ func (h *PeerIDAuthHandshakeServer) Run() error {
 			return err
 		}
 
-		if h.opaque.IsToken {
+		if !h.opaque.IsToken {
 			return errors.New("expected token, got challenge")
 		}
 
